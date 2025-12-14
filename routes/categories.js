@@ -6,30 +6,35 @@ const Category = require('../models/Category');
 router.get('/', async (req, res) => {
   try {
     const categories = await Category.find({});
-    res.json({
-      data: {
-        categories
-      }
+
+    // ✅ FRONTEND-FRIENDLY RESPONSE
+    res.status(200).json({
+      categories
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Categories API error:', error);
+    res.status(500).json({ message: 'Failed to fetch categories' });
   }
 });
 
-// GET category by ID
+// GET single category by ID
 router.get('/:categoryId', async (req, res) => {
   try {
     const category = await Category.findById(req.params.categoryId);
+
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
-    res.json({
-      data: {
-        category
-      }
+
+    // ✅ FRONTEND-FRIENDLY RESPONSE
+    res.status(200).json({
+      category
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Category detail error:', error);
+    res.status(500).json({ message: 'Failed to fetch category' });
   }
 });
 
