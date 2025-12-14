@@ -11,12 +11,37 @@ connectDB();
 
 const app = express();
 
-// Middleware
+/**
+ * ✅ CORS CONFIGURATION (VERY IMPORTANT)
+ * - Do NOT use origin: '*'
+ * - Credentials require explicit origins
+ */
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://my-ecommerce-app-frontend.vercel.app'
+];
 
 app.use(cors({
-  origin: '*',
-  credentials: true,
+  origin: function (origin, callback) {
+    // Allow server-to-server & Postman requests (no origin)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('CORS not allowed for this origin'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
+// ✅ Handle preflight requests
+app.options('*', cors());
+
+// Middleware
 app.use(express.json());
 
 // Routes
