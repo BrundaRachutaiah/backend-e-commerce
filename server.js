@@ -12,9 +12,9 @@ connectDB();
 const app = express();
 
 /**
- * ✅ CORS CONFIGURATION (VERY IMPORTANT)
- * - Do NOT use origin: '*'
- * - Credentials require explicit origins
+ * ✅ CORS CONFIGURATION (FIXED)
+ * - Explicit origins
+ * - Explicit custom headers (x-session-id)
  */
 const allowedOrigins = [
   'http://localhost:3000',
@@ -24,21 +24,25 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow server-to-server & Postman requests (no origin)
+    // Allow server-to-server / Postman requests
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+      callback(null, true);
     } else {
-      return callback(new Error('CORS not allowed for this origin'));
+      callback(new Error('CORS not allowed for this origin'));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-session-id'   // ✅ THIS FIXES YOUR ERROR
+  ],
   credentials: true
 }));
 
-// ✅ Handle preflight requests
+// ✅ Handle preflight OPTIONS requests
 app.options('*', cors());
 
 // Middleware
