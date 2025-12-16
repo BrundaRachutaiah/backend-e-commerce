@@ -15,13 +15,13 @@ const getSessionId = (req) => {
 router.get('/', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
+
     let addressDoc = await Address.findOne({ sessionId });
-    
     if (!addressDoc) {
       addressDoc = new Address({ sessionId, addresses: [] });
       await addressDoc.save();
     }
-    
+
     res.json({
       data: {
         addresses: addressDoc.addresses,
@@ -37,33 +37,40 @@ router.get('/', async (req, res) => {
 router.post('/add', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
-    const { name, street, city, state, zipCode, country, isDefault = false } = req.body;
-    
-    // Find or create address document
+
+    const {
+      name,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      postalCode,
+      country,
+      isDefault = false
+    } = req.body;
+
     let addressDoc = await Address.findOne({ sessionId });
     if (!addressDoc) {
       addressDoc = new Address({ sessionId, addresses: [] });
     }
-    
-    // If this is set as default, unset other default addresses
+
     if (isDefault) {
-      addressDoc.addresses.forEach(addr => {
-        addr.isDefault = false;
-      });
+      addressDoc.addresses.forEach(addr => (addr.isDefault = false));
     }
-    
+
     addressDoc.addresses.push({
       name,
-      street,
+      addressLine1,
+      addressLine2,
       city,
       state,
-      zipCode,
+      postalCode,
       country,
       isDefault
     });
-    
+
     await addressDoc.save();
-    
+
     res.json({
       data: {
         addresses: addressDoc.addresses,
@@ -80,35 +87,43 @@ router.post('/add', async (req, res) => {
 router.put('/:addressId', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
-    const { name, street, city, state, zipCode, country, isDefault = false } = req.body;
-    
-    let addressDoc = await Address.findOne({ sessionId });
+
+    const {
+      name,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      postalCode,
+      country,
+      isDefault = false
+    } = req.body;
+
+    const addressDoc = await Address.findOne({ sessionId });
     if (!addressDoc) {
       return res.status(404).json({ message: 'Address document not found' });
     }
-    
+
     const address = addressDoc.addresses.id(req.params.addressId);
     if (!address) {
       return res.status(404).json({ message: 'Address not found' });
     }
-    
-    // If this is set as default, unset other default addresses
+
     if (isDefault) {
-      addressDoc.addresses.forEach(addr => {
-        addr.isDefault = false;
-      });
+      addressDoc.addresses.forEach(addr => (addr.isDefault = false));
     }
-    
+
     address.name = name;
-    address.street = street;
+    address.addressLine1 = addressLine1;
+    address.addressLine2 = addressLine2;
     address.city = city;
     address.state = state;
-    address.zipCode = zipCode;
+    address.postalCode = postalCode;
     address.country = country;
     address.isDefault = isDefault;
-    
+
     await addressDoc.save();
-    
+
     res.json({
       data: {
         addresses: addressDoc.addresses,
@@ -125,14 +140,18 @@ router.put('/:addressId', async (req, res) => {
 router.delete('/:addressId', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
-    let addressDoc = await Address.findOne({ sessionId });
+
+    const addressDoc = await Address.findOne({ sessionId });
     if (!addressDoc) {
       return res.status(404).json({ message: 'Address document not found' });
     }
-    
-    addressDoc.addresses = addressDoc.addresses.filter(addr => addr._id.toString() !== req.params.addressId);
+
+    addressDoc.addresses = addressDoc.addresses.filter(
+      addr => addr._id.toString() !== req.params.addressId
+    );
+
     await addressDoc.save();
-    
+
     res.json({
       data: {
         addresses: addressDoc.addresses,

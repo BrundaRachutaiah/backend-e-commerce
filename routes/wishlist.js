@@ -16,13 +16,15 @@ const getSessionId = (req) => {
 router.get('/', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
-    let wishlist = await Wishlist.findOne({ sessionId }).populate('items');
-    
+
+    let wishlist = await Wishlist.findOne({ sessionId })
+      .populate('items.product');
+
     if (!wishlist) {
       wishlist = new Wishlist({ sessionId, items: [] });
       await wishlist.save();
     }
-    
+
     res.json({
       data: {
         wishlist: wishlist.items,
@@ -39,28 +41,29 @@ router.post('/add', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     const { productId } = req.body;
-    
-    // Check if product exists
+
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
-    
-    // Find or create wishlist
+
     let wishlist = await Wishlist.findOne({ sessionId });
     if (!wishlist) {
       wishlist = new Wishlist({ sessionId, items: [] });
     }
-    
-    // Check if product already in wishlist
-    if (wishlist.items.includes(productId)) {
+
+    const exists = wishlist.items.find(
+      item => item.product.toString() === productId
+    );
+
+    if (exists) {
       return res.status(400).json({ message: 'Product already in wishlist' });
     }
-    
-    wishlist.items.push(productId);
+
+    wishlist.items.push({ product: productId });
     await wishlist.save();
-    await wishlist.populate('items');
-    
+    await wishlist.populate('items.product');
+
     res.json({
       data: {
         wishlist: wishlist.items,
@@ -77,15 +80,19 @@ router.post('/add', async (req, res) => {
 router.delete('/remove/:productId', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
-    let wishlist = await Wishlist.findOne({ sessionId });
+
+    const wishlist = await Wishlist.findOne({ sessionId });
     if (!wishlist) {
       return res.status(404).json({ message: 'Wishlist not found' });
     }
-    
-    wishlist.items = wishlist.items.filter(item => item.toString() !== req.params.productId);
+
+    wishlist.items = wishlist.items.filter(
+      item => item.product.toString() !== req.params.productId
+    );
+
     await wishlist.save();
-    await wishlist.populate('items');
-    
+    await wishlist.populate('items.product');
+
     res.json({
       data: {
         wishlist: wishlist.items,
