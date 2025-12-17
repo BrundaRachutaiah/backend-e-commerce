@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
 router.post('/add', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
-    const { productId, quantity = 1 } = req.body;
+    const { productId, quantity = 1, size } = req.body;
 
     if (quantity <= 0) {
       return res.status(400).json({ message: 'Quantity must be greater than zero' });
@@ -51,19 +51,24 @@ router.post('/add', async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Check if size is available
+    if (size && product.sizes.length > 0 && !product.sizes.includes(size)) {
+      return res.status(400).json({ message: `Size ${size} is not available for this product` });
+    }
+
     let cart = await Cart.findOne({ sessionId });
     if (!cart) {
       cart = new Cart({ sessionId, items: [] });
     }
 
     const existingItem = cart.items.find(
-      item => item.product.toString() === productId
+      item => item.product.toString() === productId && item.size === size
     );
 
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
-      cart.items.push({ product: productId, quantity });
+      cart.items.push({ product: productId, quantity, size });
     }
 
     await cart.save();
@@ -85,7 +90,7 @@ router.post('/add', async (req, res) => {
 router.put('/update', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
-    const { productId, quantity } = req.body;
+    const { productId, quantity, size } = req.body;
 
     if (quantity <= 0) {
       return res.status(400).json({ message: 'Quantity must be greater than zero' });
@@ -97,7 +102,7 @@ router.put('/update', async (req, res) => {
     }
 
     const item = cart.items.find(
-      item => item.product.toString() === productId
+      item => item.product.toString() === productId && item.size === size
     );
 
     if (!item) {
@@ -124,6 +129,7 @@ router.put('/update', async (req, res) => {
 router.delete('/remove/:productId', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
+    const { size } = req.query;
 
     const cart = await Cart.findOne({ sessionId });
     if (!cart) {
@@ -131,7 +137,11 @@ router.delete('/remove/:productId', async (req, res) => {
     }
 
     cart.items = cart.items.filter(
-      item => item.product.toString() !== req.params.productId
+      item => {
+        const isSameProduct = item.product.toString() !== req.params.productId;
+        const isSameSize = size ? item.size !== size : true;
+        return isSameProduct || isSameSize;
+      }
     );
 
     await cart.save();
@@ -142,6 +152,31 @@ router.delete('/remove/:productId', async (req, res) => {
         cart,
         sessionId,
         message: 'Item removed from cart successfully'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// CLEAR cart
+router.delete('/clear', async (req, res) => {
+  try {
+    const sessionId = getSessionId(req);
+
+    const cart = await Cart.findOne({ sessionId });
+    if (!cart) {
+      return res.status(404).json({ message: 'Cart not found' });
+    }
+
+    cart.items = [];
+    await cart.save();
+
+    res.json({
+      data: {
+        cart,
+        sessionId,
+        message: 'Cart cleared successfully'
       }
     });
   } catch (error) {
