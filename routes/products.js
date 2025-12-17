@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
+
+// Helper function to validate ObjectId
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
 
 // GET all products (with filters)
 router.get('/', async (req, res) => {
@@ -9,8 +15,8 @@ router.get('/', async (req, res) => {
 
     let query = {};
 
-    // Filter by category
-    if (category) {
+    // Filter by category (only if it's a valid ObjectId)
+    if (category && isValidObjectId(category)) {
       query.category = category;
     }
 
@@ -57,7 +63,6 @@ router.get('/', async (req, res) => {
     // Get total count for pagination
     const total = await Product.countDocuments(query);
 
-    // ✅ FRONTEND-FRIENDLY RESPONSE
     res.status(200).json({
       products,
       pagination: {
@@ -74,54 +79,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET single product by ID
-router.get('/:productId', async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.productId)
-      .populate('category');
-
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    // ✅ FRONTEND-FRIENDLY RESPONSE
-    res.status(200).json({
-      product
-    });
-
-  } catch (error) {
-    console.error('Product detail error:', error);
-    res.status(500).json({ message: 'Failed to fetch product' });
-  }
-});
-
-// GET recommended products
-router.get('/recommended/:productId', async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.productId).populate('category');
-    
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    // Find products in the same category, excluding the current product
-    const recommendedProducts = await Product.find({
-      _id: { $ne: req.params.productId },
-      category: product.category._id
-    })
-    .populate('category')
-    .limit(4); // Limit to 4 recommended products
-
-    res.status(200).json({
-      products: recommendedProducts
-    });
-  } catch (error) {
-    console.error('Recommended products error:', error);
-    res.status(500).json({ message: 'Failed to fetch recommended products' });
-  }
-});
-
-// GET products on sale
+// GET products on sale - MUST come before /:productId route
 router.get('/sale', async (req, res) => {
   try {
     const { limit = 10, page = 1 } = req.query;
@@ -160,7 +118,7 @@ router.get('/sale', async (req, res) => {
   }
 });
 
-// GET featured products
+// GET featured products - MUST come before /:productId route
 router.get('/featured', async (req, res) => {
   try {
     const { limit = 10 } = req.query;
@@ -175,6 +133,62 @@ router.get('/featured', async (req, res) => {
   } catch (error) {
     console.error('Featured products error:', error);
     res.status(500).json({ message: 'Failed to fetch featured products' });
+  }
+});
+
+// GET recommended products - MUST come before /:productId route
+router.get('/recommended/:productId', async (req, res) => {
+  try {
+    // Validate productId
+    if (!isValidObjectId(req.params.productId)) {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+
+    const product = await Product.findById(req.params.productId).populate('category');
+    
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Find products in the same category, excluding the current product
+    const recommendedProducts = await Product.find({
+      _id: { $ne: req.params.productId },
+      category: product.category._id
+    })
+    .populate('category')
+    .limit(4); // Limit to 4 recommended products
+
+    res.status(200).json({
+      products: recommendedProducts
+    });
+  } catch (error) {
+    console.error('Recommended products error:', error);
+    res.status(500).json({ message: 'Failed to fetch recommended products' });
+  }
+});
+
+// GET single product by ID - MUST come after all specific routes
+router.get('/:productId', async (req, res) => {
+  try {
+    // Validate productId
+    if (!isValidObjectId(req.params.productId)) {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+
+    const product = await Product.findById(req.params.productId)
+      .populate('category');
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json({
+      product
+    });
+
+  } catch (error) {
+    console.error('Product detail error:', error);
+    res.status(500).json({ message: 'Failed to fetch product' });
   }
 });
 
