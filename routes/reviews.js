@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose'); // Added missing import
 const Review = require('../models/Review');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
@@ -43,14 +44,16 @@ router.get('/product/:productId', async (req, res) => {
     ]);
     
     res.json({
-      reviews,
-      pagination: {
-        page: parseInt(page),
-        limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum)
-      },
-      ratingDistribution
+      data: {
+        reviews,
+        pagination: {
+          page: parseInt(page),
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        },
+        ratingDistribution
+      }
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -109,8 +112,10 @@ router.post('/product/:productId', protect, async (req, res) => {
     await createdReview.populate('user', 'name');
     
     res.status(201).json({
-      review: createdReview,
-      message: 'Review added successfully'
+      data: {
+        review: createdReview,
+        message: 'Review added successfully'
+      }
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -155,8 +160,10 @@ router.put('/:reviewId', protect, async (req, res) => {
     await updatedReview.populate('user', 'name');
     
     res.json({
-      review: updatedReview,
-      message: 'Review updated successfully'
+      data: {
+        review: updatedReview,
+        message: 'Review updated successfully'
+      }
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -192,7 +199,11 @@ router.delete('/:reviewId', protect, async (req, res) => {
       rating: avgRating
     });
     
-    res.json({ message: 'Review deleted successfully' });
+    res.json({ 
+      data: {
+        message: 'Review deleted successfully'
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

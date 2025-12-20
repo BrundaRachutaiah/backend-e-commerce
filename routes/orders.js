@@ -69,6 +69,20 @@ router.post('/', async (req, res) => {
       shippingPrice = 0 
     } = req.body;
     
+    // Check if all products are in stock
+    for (const item of orderItems) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res.status(404).json({ message: `Product not found: ${item.product}` });
+      }
+      
+      if (product.countInStock < item.quantity) {
+        return res.status(400).json({ 
+          message: `Insufficient stock for product: ${product.name}. Available: ${product.countInStock}, Requested: ${item.quantity}` 
+        });
+      }
+    }
+    
     // Calculate total price
     const totalPrice = itemsPrice + taxPrice + shippingPrice;
     
@@ -85,6 +99,14 @@ router.post('/', async (req, res) => {
     });
     
     const createdOrder = await order.save();
+    
+    // Update product stock
+    for (const item of orderItems) {
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { countInStock: -item.quantity } }
+      );
+    }
     
     // Clear cart after placing order
     const cart = await Cart.findOne({ sessionId });
@@ -123,6 +145,13 @@ router.post('/buynow', async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
     
+    // Check if product is in stock
+    if (product.countInStock < quantity) {
+      return res.status(400).json({ 
+        message: `Insufficient stock. Available: ${product.countInStock}, Requested: ${quantity}` 
+      });
+    }
+    
     // Check if size is available
     if (size && product.sizes.length > 0 && !product.sizes.includes(size)) {
       return res.status(400).json({ message: `Size ${size} is not available for this product` });
@@ -156,6 +185,12 @@ router.post('/buynow', async (req, res) => {
     });
     
     const createdOrder = await order.save();
+    
+    // Update product stock
+    await Product.findByIdAndUpdate(
+      productId,
+      { $inc: { countInStock: -quantity } }
+    );
     
     res.status(201).json({
       data: {

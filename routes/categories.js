@@ -9,7 +9,9 @@ router.get('/', async (req, res) => {
 
     // ✅ FRONTEND-FRIENDLY RESPONSE
     res.status(200).json({
-      categories
+      data: {
+        categories
+      }
     });
 
   } catch (error) {
@@ -29,7 +31,9 @@ router.get('/:categoryId', async (req, res) => {
 
     // ✅ FRONTEND-FRIENDLY RESPONSE
     res.status(200).json({
-      category
+      data: {
+        category
+      }
     });
 
   } catch (error) {

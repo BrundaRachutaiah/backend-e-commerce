@@ -64,12 +64,14 @@ router.get('/', async (req, res) => {
     const total = await Product.countDocuments(query);
 
     res.status(200).json({
-      products,
-      pagination: {
-        page: parseInt(page),
-        limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum)
+      data: {
+        products,
+        pagination: {
+          page: parseInt(page),
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        }
       }
     });
 
@@ -104,12 +106,14 @@ router.get('/sale', async (req, res) => {
     const total = await Product.countDocuments(query);
 
     res.status(200).json({
-      products,
-      pagination: {
-        page: parseInt(page),
-        limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum)
+      data: {
+        products,
+        pagination: {
+          page: parseInt(page),
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        }
       }
     });
   } catch (error) {
@@ -128,7 +132,9 @@ router.get('/featured', async (req, res) => {
       .limit(parseInt(limit));
 
     res.status(200).json({
-      products
+      data: {
+        products
+      }
     });
   } catch (error) {
     console.error('Featured products error:', error);
@@ -159,7 +165,9 @@ router.get('/recommended/:productId', async (req, res) => {
     .limit(4); // Limit to 4 recommended products
 
     res.status(200).json({
-      products: recommendedProducts
+      data: {
+        products: recommendedProducts
+      }
     });
   } catch (error) {
     console.error('Recommended products error:', error);
@@ -183,7 +191,9 @@ router.get('/:productId', async (req, res) => {
     }
 
     res.status(200).json({
-      product
+      data: {
+        product
+      }
     });
 
   } catch (error) {

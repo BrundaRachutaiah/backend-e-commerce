@@ -51,6 +51,11 @@ router.post('/add', async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Check if product is in stock
+    if (product.countInStock < quantity) {
+      return res.status(400).json({ message: 'Insufficient stock' });
+    }
+
     // Check if size is available
     if (size && product.sizes.length > 0 && !product.sizes.includes(size)) {
       return res.status(400).json({ message: `Size ${size} is not available for this product` });
@@ -66,6 +71,10 @@ router.post('/add', async (req, res) => {
     );
 
     if (existingItem) {
+      // Check if total quantity would exceed stock
+      if (product.countInStock < existingItem.quantity + quantity) {
+        return res.status(400).json({ message: 'Insufficient stock' });
+      }
       existingItem.quantity += quantity;
     } else {
       cart.items.push({ product: productId, quantity, size });
@@ -107,6 +116,16 @@ router.put('/update', async (req, res) => {
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found in cart' });
+    }
+
+    // Check if product is in stock
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    if (product.countInStock < quantity) {
+      return res.status(400).json({ message: 'Insufficient stock' });
     }
 
     item.quantity = quantity;
