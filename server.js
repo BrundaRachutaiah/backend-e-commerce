@@ -15,7 +15,7 @@ app.use(
     origin: [
       'http://localhost:5173',
       'http://localhost:3000',
-      'https://my-ecommerce-app-frontend.vercel.app'
+      'https://ecommerce-frontend-phi-pink.vercel.app'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'],
