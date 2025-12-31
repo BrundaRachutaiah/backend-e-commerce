@@ -145,6 +145,7 @@ router.put('/update', async (req, res) => {
 });
 
 // REMOVE item from cart
+// REMOVE item from cart (FIXED)
 router.delete('/remove/:productId', async (req, res) => {
   try {
     const sessionId = getSessionId(req);
@@ -155,13 +156,13 @@ router.delete('/remove/:productId', async (req, res) => {
       return res.status(404).json({ message: 'Cart not found' });
     }
 
-    cart.items = cart.items.filter(
-      item => {
-        const isSameProduct = item.product.toString() !== req.params.productId;
-        const isSameSize = size ? item.size !== size : true;
-        return isSameProduct || isSameSize;
-      }
-    );
+    cart.items = cart.items.filter(item => {
+      const sameProduct = item.product.toString() === req.params.productId;
+      const sameSize = size ? item.size === size : true;
+
+      // ✅ KEEP item if it is NOT the one to be removed
+      return !(sameProduct && sameSize);
+    });
 
     await cart.save();
     await cart.populate('items.product');
