@@ -4,33 +4,56 @@ const Product = require('../models/Product');
 const mongoose = require('mongoose');
 
 // Helper function to validate ObjectId
-const isValidObjectId = (id) => {
-  return mongoose.Types.ObjectId.isValid(id);
-};
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-// GET all products (with filters)
+// ==============================
+// GET ALL PRODUCTS (WITH FILTERS)
+// ==============================
 router.get('/', async (req, res) => {
   try {
-    const { category, rating, sort, search, featured, limit = 20, page = 1 } = req.query;
+    const {
+      category,
+      rating,
+      sort,
+      search,
+      featured,
+      limit = 20,
+      page = 1
+    } = req.query;
 
     let query = {};
 
-    // Filter by category (only if it's a valid ObjectId)
-    if (category && isValidObjectId(category)) {
-      query.category = category;
+    /* ============================
+       CATEGORY FILTER (FIXED)
+       Supports single & multiple
+    ============================ */
+    if (category) {
+      const categoryIds = category
+        .split(',')
+        .filter(id => isValidObjectId(id));
+
+      if (categoryIds.length > 0) {
+        query.category = { $in: categoryIds };
+      }
     }
 
-    // Filter by rating
+    /* ============================
+       RATING FILTER
+    ============================ */
     if (rating) {
       query.rating = { $gte: Number(rating) };
     }
 
-    // Filter featured products
+    /* ============================
+       FEATURED FILTER
+    ============================ */
     if (featured === 'true') {
       query.featured = true;
     }
 
-    // Search by name or description
+    /* ============================
+       SEARCH FILTER
+    ============================ */
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -38,21 +61,33 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    // Sorting
+    /* ============================
+       SORTING
+    ============================ */
     let sortOptions = {};
-    if (sort === 'price_low_high') {
-      sortOptions.price = 1;
-    } else if (sort === 'price_high_low') {
-      sortOptions.price = -1;
-    } else if (sort === 'rating_high_low') {
-      sortOptions.rating = -1;
-    } else if (sort === 'newest') {
-      sortOptions.createdAt = -1;
+    switch (sort) {
+      case 'price_low_high':
+        sortOptions.price = 1;
+        break;
+      case 'price_high_low':
+        sortOptions.price = -1;
+        break;
+      case 'rating_high_low':
+        sortOptions.rating = -1;
+        break;
+      case 'newest':
+        sortOptions.createdAt = -1;
+        break;
+      default:
+        break;
     }
 
-    // Pagination
+    /* ============================
+       PAGINATION
+    ============================ */
     const limitNum = parseInt(limit);
-    const skip = (parseInt(page) - 1) * limitNum;
+    const pageNum = parseInt(page);
+    const skip = (pageNum - 1) * limitNum;
 
     const products = await Product.find(query)
       .populate('category')
@@ -60,14 +95,13 @@ router.get('/', async (req, res) => {
       .limit(limitNum)
       .skip(skip);
 
-    // Get total count for pagination
     const total = await Product.countDocuments(query);
 
     res.status(200).json({
       data: {
         products,
         pagination: {
-          page: parseInt(page),
+          page: pageNum,
           limit: limitNum,
           total,
           pages: Math.ceil(total / limitNum)
@@ -81,18 +115,16 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET products on sale - MUST come before /:productId route
+/* ==============================
+   GET SALE PRODUCTS
+============================== */
 router.get('/sale', async (req, res) => {
   try {
     const { limit = 10, page = 1 } = req.query;
 
-    // Find products with discount
     const query = { discount: { $gt: 0 } };
-    
-    // Sorting
-    let sortOptions = { discount: -1 }; // Sort by highest discount first
+    const sortOptions = { discount: -1 };
 
-    // Pagination
     const limitNum = parseInt(limit);
     const skip = (parseInt(page) - 1) * limitNum;
 
@@ -102,7 +134,6 @@ router.get('/sale', async (req, res) => {
       .limit(limitNum)
       .skip(skip);
 
-    // Get total count for pagination
     const total = await Product.countDocuments(query);
 
     res.status(200).json({
@@ -122,19 +153,19 @@ router.get('/sale', async (req, res) => {
   }
 });
 
-// GET featured products - MUST come before /:productId route
+/* ==============================
+   GET FEATURED PRODUCTS
+============================== */
 router.get('/featured', async (req, res) => {
   try {
     const { limit = 10 } = req.query;
-    
+
     const products = await Product.find({ featured: true })
       .populate('category')
       .limit(parseInt(limit));
 
     res.status(200).json({
-      data: {
-        products
-      }
+      data: { products }
     });
   } catch (error) {
     console.error('Featured products error:', error);
@@ -142,32 +173,32 @@ router.get('/featured', async (req, res) => {
   }
 });
 
-// GET recommended products - MUST come before /:productId route
+/* ==============================
+   GET RECOMMENDED PRODUCTS
+============================== */
 router.get('/recommended/:productId', async (req, res) => {
   try {
-    // Validate productId
-    if (!isValidObjectId(req.params.productId)) {
+    const { productId } = req.params;
+
+    if (!isValidObjectId(productId)) {
       return res.status(400).json({ message: 'Invalid product ID' });
     }
 
-    const product = await Product.findById(req.params.productId).populate('category');
-    
+    const product = await Product.findById(productId).populate('category');
+
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Find products in the same category, excluding the current product
     const recommendedProducts = await Product.find({
-      _id: { $ne: req.params.productId },
+      _id: { $ne: productId },
       category: product.category._id
     })
-    .populate('category')
-    .limit(4); // Limit to 4 recommended products
+      .populate('category')
+      .limit(4);
 
     res.status(200).json({
-      data: {
-        products: recommendedProducts
-      }
+      data: { products: recommendedProducts }
     });
   } catch (error) {
     console.error('Recommended products error:', error);
@@ -175,15 +206,18 @@ router.get('/recommended/:productId', async (req, res) => {
   }
 });
 
-// GET single product by ID - MUST come after all specific routes
+/* ==============================
+   GET SINGLE PRODUCT
+============================== */
 router.get('/:productId', async (req, res) => {
   try {
-    // Validate productId
-    if (!isValidObjectId(req.params.productId)) {
+    const { productId } = req.params;
+
+    if (!isValidObjectId(productId)) {
       return res.status(400).json({ message: 'Invalid product ID' });
     }
 
-    const product = await Product.findById(req.params.productId)
+    const product = await Product.findById(productId)
       .populate('category');
 
     if (!product) {
@@ -191,11 +225,8 @@ router.get('/:productId', async (req, res) => {
     }
 
     res.status(200).json({
-      data: {
-        product
-      }
+      data: { product }
     });
-
   } catch (error) {
     console.error('Product detail error:', error);
     res.status(500).json({ message: 'Failed to fetch product' });
