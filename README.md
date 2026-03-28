@@ -83,20 +83,6 @@ http://localhost:5000
 
 ---
 
-## 🔐 Environment Variables
-
-Create a `.env` file in the root folder:
-
-```
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-
-```
-
----
-
-## 📡 API Reference
-
 ### 🗂️ Categories
 
 GET /api/categories
