@@ -72,7 +72,7 @@ npm install
 ## ▶️ Run the Server
 
 ```bash
-npm start
+node index.js
 ```
 
 Server will run at:
