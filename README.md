@@ -205,16 +205,6 @@ node seeder.js
 
 ---
 
-## 🔒 Authentication
-
-Protected routes require token:
-
-```
-Authorization: Bearer <token>
-```
-
----
-
 ## 📂 Project Structure
 
 ```
