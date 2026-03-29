@@ -416,4 +416,4 @@ Watch a full walkthrough of all features: [Loom Video Link](#)
 
 ## 📬 Contact
 
-For bugs or feature requests, please open an issue or reach out at: `your-email@example.com`
+For bugs or feature requests, please open an issue or reach out at: `brundadr315@gmail.com`
